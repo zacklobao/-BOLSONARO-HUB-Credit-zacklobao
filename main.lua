@@ -1,8 +1,12 @@
--- [[ ⚽ BOLSONARO HUB V8.0 - REACH REAL ]] --
+-- [[ ⚽ BOLSONARO HUB V8.1 - REACH REAL + MINIMIZE FIX ]] --
 -- Reach via firetouchinterest (funciona de verdade)
 -- 5 nomes de bola: TPS, ESA, MRS, PRS, MPS
+-- UI com minimize funcional (botão 👑)
 
-print("[BOLSONARO] V8.0 — REACH REAL carregando...")
+print("═══════════════════════════════════════════")
+print("  🇧🇷  BOLSONARO HUB  •  v8.1")
+print("  Carregando...")
+print("═══════════════════════════════════════════")
 
 local Players          = game:GetService("Players")
 local RunService       = game:GetService("RunService")
@@ -23,7 +27,6 @@ local Config = {
     FOV = { Value = 70, Base = 70 },
     Brightness = { Enabled = false, Value = 1.8 },
 
-    -- 🎯 REACH REAL
     Reach = {
         Enabled       = false,
         Range         = 10,
@@ -31,10 +34,9 @@ local Config = {
         ShowCircle    = false,
         CircleColor   = Color3.fromRGB(255, 215, 0),
         CircleTransp  = 0.85,
-        AutoTouch     = true,   -- firetouchinterest automático
+        AutoTouch     = true,
     },
 
-    -- 🔒 FOLLOW TRAVADO
     FollowBall = {
         Enabled = false, GlueRadius = 2.5, GlueSpeed = 2,
         MaxBallSpeed = 4, Prediction = 0, Smoothness = 30,
@@ -72,7 +74,7 @@ local function getSafeCharacter()
 end
 
 -- ═══════════════════════════════════════════════
---  DETECTOR DE BOLAS (5 NOMES!)
+--  DETECTOR DE BOLAS
 -- ═══════════════════════════════════════════════
 local BALL_NAMES = { "TPS", "ESA", "MRS", "PRS", "MPS" }
 
@@ -116,19 +118,14 @@ local function getClosestBall()
 end
 
 -- ═══════════════════════════════════════════════
---  🎯 REACH REAL — firetouchinterest
+--  🎯 REACH REAL
 -- ═══════════════════════════════════════════════
--- Técnica: pega o TouchInterest da perna direita e força o evento
--- de toque entre a bola e a perna, mesmo de longe.
-
 local function getLegTouchInterest()
     local char = getSafeCharacter(); if not char then return nil end
-    -- R6 = "Right Leg" | R15 = "RightFoot" ou "RightLowerLeg"
     local leg = char:FindFirstChild("Right Leg")
         or char:FindFirstChild("RightFoot")
         or char:FindFirstChild("RightLowerLeg")
     if not leg then return nil end
-    -- Acha o TouchInterest (criado pelo Roblox quando tem .Touched)
     for _, v in ipairs(leg:GetDescendants()) do
         if v.Name == "TouchInterest" then
             return v, leg
@@ -154,12 +151,10 @@ local function applyReach()
         if ball and ball.Parent and ball:IsA("BasePart") then
             local dist = (ball.Position - leg.Position).Magnitude
             if dist < reach then
-                -- 🔑 FORÇA O TOQUE
                 pcall(function()
-                    firetouchinterest(ball, ti.Parent, 0)  -- touch begin
-                    firetouchinterest(ball, ti.Parent, 1)  -- touch end
+                    firetouchinterest(ball, ti.Parent, 0)
+                    firetouchinterest(ball, ti.Parent, 1)
                 end)
-                -- Impulso extra (magPower)
                 if Config.Reach.MagPower > 0 then
                     pcall(function()
                         local dir = (myPos - ball.Position).Unit
@@ -172,9 +167,6 @@ local function applyReach()
     end
 end
 
--- ═══════════════════════════════════════════════
---  CIRCLE VISUAL DO REACH
--- ═══════════════════════════════════════════════
 local function updateReachCircle()
     if not Config.Reach.ShowCircle then
         if circlePart then circlePart:Destroy(); circlePart = nil end
@@ -279,7 +271,7 @@ local function applyBrightness()
 end
 
 -- ═══════════════════════════════════════════════
---  AUTO FOLLOW (TRAVADO)
+--  AUTO FOLLOW
 -- ═══════════════════════════════════════════════
 local function updateFollowBall(dt)
     if not Config.FollowBall.Enabled then followDir = Vector3.zero; manualPauseUntil = 0; return end
@@ -373,7 +365,7 @@ local function initBypass()
 end
 
 -- ═══════════════════════════════════════════════
---  UI
+--  UI (V8.1 com MINIMIZE)
 -- ═══════════════════════════════════════════════
 local refreshUIRefs = {}
 
@@ -388,9 +380,51 @@ local function createUI()
     ScreenGui.Parent = parentGui
     table.insert(UI_Elements, ScreenGui)
 
+    local minimized = false
+    local savedPos = UDim2.new(0.5, -310, 0.5, -200)
+
+    -- Botão restaurar (flutuante)
+    local restoreBtn = Instance.new("TextButton")
+    restoreBtn.Size = UDim2.new(0, 50, 0, 50)
+    restoreBtn.Position = UDim2.new(0, 20, 0, 100)
+    restoreBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    restoreBtn.BorderSizePixel = 0
+    restoreBtn.Text = "👑"
+    restoreBtn.TextSize = 24
+    restoreBtn.Font = Enum.Font.GothamBold
+    restoreBtn.AutoButtonColor = false
+    restoreBtn.Visible = false
+    restoreBtn.Active = true
+    restoreBtn.Parent = ScreenGui
+    local rbc = Instance.new("UICorner"); rbc.CornerRadius = UDim.new(1,0); rbc.Parent = restoreBtn
+    local rbs = Instance.new("UIStroke"); rbs.Color = Color3.fromRGB(75,145,230); rbs.Thickness = 2; rbs.Parent = restoreBtn
+
+    do
+        local drag, ds, sp
+        restoreBtn.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1
+                or i.UserInputType == Enum.UserInputType.Touch then
+                drag, ds, sp = true, i.Position, restoreBtn.Position
+            end
+        end)
+        restoreBtn.InputChanged:Connect(function(i)
+            if drag and (i.UserInputType == Enum.UserInputType.MouseMovement
+                or i.UserInputType == Enum.UserInputType.Touch) then
+                local d = i.Position - ds
+                restoreBtn.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
+            end
+        end)
+        restoreBtn.InputEnded:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1
+                or i.UserInputType == Enum.UserInputType.Touch then drag = false end
+        end)
+    end
+
+    -- Painel principal
     local Main = Instance.new("Frame")
+    Main.Name = "Main"
     Main.Size = UDim2.new(0, 620, 0, 400)
-    Main.Position = UDim2.new(0.5, -310, 0.5, -200)
+    Main.Position = savedPos
     Main.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
     Main.BorderSizePixel = 0; Main.Active = true; Main.Parent = ScreenGui
     mainFrame = Main
@@ -430,7 +464,7 @@ local function createUI()
     local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0,6); bc.Parent = badge
     local vl = Instance.new("TextLabel")
     vl.Size = UDim2.new(1,0,1,0); vl.BackgroundTransparency = 1
-    vl.Text = "v8.0"; vl.TextSize = 11
+    vl.Text = "v8.1"; vl.TextSize = 11
     vl.Font = Enum.Font.GothamBold; vl.TextColor3 = Color3.fromRGB(220,220,220); vl.Parent = badge
 
     local function makeWinBtn(text, xPos, onClick)
@@ -442,10 +476,25 @@ local function createUI()
         if onClick then b.MouseButton1Click:Connect(onClick) end
         return b
     end
-    makeWinBtn("−", -80, function() Main.Visible = false end)
-    makeWinBtn("⛶", -52, function() end)
-    makeWinBtn("×", -26, function() Main.Visible = false; print("[BOLSONARO] UI escondida. RSHIFT pra reabrir.") end)
 
+    makeWinBtn("−", -80, function()
+        savedPos = Main.Position
+        Main.Visible = false
+        restoreBtn.Visible = true
+    end)
+    makeWinBtn("⛶", -52, function() end)
+    makeWinBtn("×", -26, function()
+        Main.Visible = false
+        restoreBtn.Visible = false
+    end)
+
+    restoreBtn.MouseButton1Click:Connect(function()
+        Main.Visible = true
+        Main.Position = savedPos
+        restoreBtn.Visible = false
+    end)
+
+    -- Sidebar
     local sidebar = Instance.new("Frame")
     sidebar.Size = UDim2.new(0,140,1,-54); sidebar.Position = UDim2.new(0,8,0,46)
     sidebar.BackgroundTransparency = 1; sidebar.BorderSizePixel = 0; sidebar.Parent = Main
@@ -644,13 +693,13 @@ local function createUI()
     local ic = Instance.new("UICorner"); ic.CornerRadius = UDim.new(0,6); ic.Parent = info
 
     local pR = newPage("Reach")
-    makeLabel(pR, 1, "― 🎯 REACH REAL (firetouchinterest)")
+    makeLabel(pR, 1, "― 🎯 REACH (firetouchinterest)")
     makeToggle(pR, 2, "Reach", "Toca a bola de longe", Config.Reach, "Enabled")
-    makeToggle(pR, 3, "Auto Touch", "Dispara firetouchinterest automático", Config.Reach, "AutoTouch")
+    makeToggle(pR, 3, "Auto Touch", "Disparo automático", Config.Reach, "AutoTouch")
     makeToggle(pR, 4, "Mostrar Circle", "Círculo visual do alcance", Config.Reach, "ShowCircle")
     makeSlider(pR, 5, "Alcance", "1-30 studs", Config.Reach, "Range", 1, 30, 1)
     makeSlider(pR, 6, "Força Magnética", "0-10 (empurra a bola)", Config.Reach, "MagPower", 0, 10, 0.5)
-    makeSlider(pR, 7, "Transparência Circle", "0-1", Config.Reach, "CircleTransp", 0.3, 1, 0.05)
+    makeSlider(pR, 7, "Transparência", "0-1", Config.Reach, "CircleTransp", 0.3, 1, 0.05)
 
     local pV = newPage("Visual")
     makeLabel(pV, 1, "― ILUMINAÇÃO")
@@ -670,15 +719,6 @@ local function createUI()
     local pO = newPage("Others")
     makeLabel(pO, 1, "― SISTEMA")
     makeToggle(pO, 2, "Debug (Console)", "Logs no console (F9)", Config, "Debug")
-    makeLabel(pO, 3, "― INFO")
-    local infoL = Instance.new("TextLabel")
-    infoL.Size = UDim2.new(1,-5,0,60); infoL.BackgroundColor3 = Color3.fromRGB(30,20,20)
-    infoL.BackgroundTransparency = 0.5; infoL.TextSize = 10
-    infoL.Font = Enum.Font.Gotham; infoL.TextColor3 = Color3.fromRGB(200,150,150)
-    infoL.Text = "🎯 Reach usa firetouchinterest\nSe não funcionar: executor sem suporte\nTestado no Delta ✅"
-    infoL.TextXAlignment = Enum.TextXAlignment.Left; infoL.TextYAlignment = Enum.TextYAlignment.Top
-    infoL.LayoutOrder = 4; infoL.Parent = pO
-    local icl = Instance.new("UICorner"); icl.CornerRadius = UDim.new(0,6); icl.Parent = infoL
 
     setPage("Reach")
 
@@ -703,11 +743,17 @@ local function createUI()
     table.insert(Connections, UserInputService.InputBegan:Connect(function(i, gpe)
         if gpe then return end
         if i.KeyCode == Enum.KeyCode.RightShift then
-            Main.Visible = not Main.Visible
+            if restoreBtn.Visible then
+                Main.Visible = true
+                Main.Position = savedPos
+                restoreBtn.Visible = false
+            else
+                Main.Visible = not Main.Visible
+                if Main.Visible then restoreBtn.Visible = false end
+            end
         elseif i.KeyCode == Enum.KeyCode.G then
             Config.Reach.Enabled = not Config.Reach.Enabled
             for _, r in ipairs(refreshUIRefs) do pcall(r) end
-            print("[BOLSONARO] Reach:", Config.Reach.Enabled and "ON" or "OFF")
         elseif i.KeyCode == Enum.KeyCode.R then
             Config.FollowBall.Enabled = not Config.FollowBall.Enabled
             for _, r in ipairs(refreshUIRefs) do pcall(r) end
@@ -718,7 +764,12 @@ local function createUI()
     end))
 
     _G.BOLSONARO = _G.BOLSONARO or {}
-    _G.BOLSONARO.showUI = function() if mainFrame then mainFrame.Visible = true end end
+    _G.BOLSONARO.showUI = function()
+        if mainFrame then
+            mainFrame.Visible = true
+            restoreBtn.Visible = false
+        end
+    end
 end
 
 -- ═══════════════════════════════════════════════
@@ -765,7 +816,7 @@ table.insert(Connections, LocalPlayer.CharacterAdded:Connect(function()
     pcall(applyFOV)
 end))
 
-print("[BOLSONARO] ═══════════════════════════════")
-print("[BOLSONARO]  ✅ V8.0 — REACH REAL (firetouchinterest)")
-print("[BOLSONARO]  RSHIFT=menu | G=reach | R=follow | T=esp")
-print("[BOLSONARO] ═══════════════════════════════")
+print("═══════════════════════════════════════════")
+print("  🇧🇷  BOLSONARO HUB v8.1 CARREGADO")
+print("  RSHIFT=menu | G=reach | R=follow | T=esp")
+print("═══════════════════════════════════════════")
